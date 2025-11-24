@@ -1,0 +1,82 @@
+---
+title: "Atividade 1 — Cotação do Dólar"
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{python}
+import requests
+import pandas as pd
+import calendar
+from datetime import datetime
+import plotly.express as px
+
+def cotacao_dolar_periodo(mmyyyy: str):
+
+    # Datas inicial e final do mês
+    first_date = datetime.strptime(mmyyyy, "%m%Y")
+    last_day = calendar.monthrange(first_date.year, first_date.month)[1]
+    last_date = first_date.replace(day=last_day)
+
+    # Datas no formato exigido pela API
+    data_ini = first_date.strftime("%m-%d-%Y")
+    data_fim = last_date.strftime("%m-%d-%Y")
+
+    # URL da API do Banco Central
+    url = (
+        "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/"
+        f"CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?"
+        f"@dataInicial='{data_ini}'&@dataFinalCotacao='{data_fim}'&$format=json"
+    )
+
+    # Requisição
+    response = requests.get(url)
+    data = response.json()["value"]
+
+    # DataFrame com a resposta
+    df = pd.DataFrame(data)
+
+    # CONVERSÃO IMPORTANTE (evita o erro!)
+    df["dataHoraCotacao"] = pd.to_datetime(df["dataHoraCotacao"]).dt.normalize()
+
+    df = df[["dataHoraCotacao", "cotacaoCompra"]]
+
+    # Gerar todas as datas do mês
+    datas_completas = pd.date_range(start=first_date, end=last_date)
+
+    df_final = pd.DataFrame({"data": datas_completas})
+
+    # CONVERTER TAMBÉM AQUI (para o mesmo tipo)
+    df_final["data"] = pd.to_datetime(df_final["data"]).dt.normalize()
+
+    # Merge SEM erro
+    df_merge = df_final.merge(
+        df,
+        how="left",
+        left_on="data",
+        right_on="dataHoraCotacao"
+    )
+
+    # Preencher dias sem cotação
+    df_merge["cotacaoCompra"] = df_merge["cotacaoCompra"].ffill()
+
+    # Gráfico
+    fig = px.line(
+        df_merge,
+        x="data",
+        y="cotacaoCompra",
+        title=f"Cotação do Dólar — {mmyyyy[:2]}/{mmyyyy[2:]}"
+    )
+
+    return fig
+
+# Mostrar o gráfico no Quarto
+fig = cotacao_dolar_periodo("082021")
+fig
+```

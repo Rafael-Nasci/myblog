@@ -1,0 +1,76 @@
+---
+title: "Atividade 3 — Regressão Linear"
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# Atividade 3 — Regressão Linear: Anos de Estudo vs. Salário 💰
+
+Nesta atividade, calculamos a regressão linear entre anos de estudo (X) e salário (Y) utilizando a solução matricial ($\beta = (X^T X)^{-1} X^T y$).
+
+---
+
+## 1. Carregamento dos Dados e Cálculo da Regressão
+
+```{python}
+#| output: false
+
+import numpy as np
+import pandas as pd
+
+# ------------------------------------------------------------------
+# SIMULAÇÃO DA LEITURA DOS ARQUIVOS (X.txt e y.txt)
+# ------------------------------------------------------------------
+valores_x = np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
+valores_y = np.array([2500, 3000, 3800, 4200, 5000, 5500, 6100, 6800, 7500, 8100, 9000])
+
+# ------------------------------------------------------------------
+# CÁLCULO DA REGRESSÃO LINEAR (SOLUÇÃO MATRICIAL)
+# ------------------------------------------------------------------
+X = np.vstack([np.ones(len(valores_x)), valores_x]).T
+y = valores_y
+
+XTX_inv = np.linalg.inv(X.T @ X)
+beta = XTX_inv @ X.T @ y
+
+a = beta[0]
+b = beta[1]
+```
+## 2. Gráfico da Regressão Estimada
+
+## 2. Gráfico da Regressão Estimada
+
+```{python}
+#| label: grafico-regressao
+#| fig-cap: "Regressão Linear: Salário (y) vs. Anos de Estudo (x)"
+
+from plotnine import (
+  ggplot, aes, geom_point, geom_abline, theme, element_text, ggsave) 
+
+# Importação CRUCIAL para exibir o arquivo PNG salvo
+from IPython.display import Image, display
+
+# Cria o DataFrame
+df = {"x": valores_x, "y": valores_y}
+
+# Cria o objeto plot
+plot = (
+  ggplot(pd.DataFrame(df), aes("x", "y"))
+  + geom_point(color="blue")
+  + geom_abline(intercept=a, slope=b, color="red", size=1)
+  + theme(text=element_text(size=12))
+)
+
+# Salva a imagem no disco (necessário para evitar o KeyError)
+nome_arquivo_png = "grafico_regressao.png"
+plot.save(nome_arquivo_png, width=6, height=4, units='in')
+
+# Carrega e exibe o arquivo PNG salvo, garantindo que ele apareça no blog.
+display(Image(filename=nome_arquivo_png))
+```

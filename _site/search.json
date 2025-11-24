@@ -1,0 +1,114 @@
+[
+  {
+    "objectID": "posts/welcome/index.html",
+    "href": "posts/welcome/index.html",
+    "title": "Welcome To My Blog",
+    "section": "",
+    "text": "This is the first post in a Quarto blog. Welcome!\n\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
+  },
+  {
+    "objectID": "posts/post-with-code/index.html",
+    "href": "posts/post-with-code/index.html",
+    "title": "Post With Code",
+    "section": "",
+    "text": "This is a post with executable code."
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this blog"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "myblog",
+    "section": "",
+    "text": "Atividade 2 — Monitoramento da Frota de Ônibus\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nAtividade 3 — Regressão Linear\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nAtividade 1 — Cotação do Dólar\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nPost With Code\n\n\n\nnews\n\ncode\n\nanalysis\n\n\n\n\n\n\n\n\n\nNov 24, 2025\n\n\nHarlow Malloc\n\n\n\n\n\n\n\n\n\n\n\n\nWelcome To My Blog\n\n\n\nnews\n\n\n\n\n\n\n\n\n\nNov 21, 2025\n\n\nTristan O’Malley\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade1.html",
+    "href": "posts/post-with-code/atividade1.html",
+    "title": "Atividade 1 — Cotação do Dólar",
+    "section": "",
+    "text": "Mostrar código\nimport requests\nimport pandas as pd\nimport calendar\nfrom datetime import datetime\nimport plotly.express as px\n\ndef cotacao_dolar_periodo(mmyyyy: str):\n\n    # Datas inicial e final do mês\n    first_date = datetime.strptime(mmyyyy, \"%m%Y\")\n    last_day = calendar.monthrange(first_date.year, first_date.month)[1]\n    last_date = first_date.replace(day=last_day)\n\n    # Datas no formato exigido pela API\n    data_ini = first_date.strftime(\"%m-%d-%Y\")\n    data_fim = last_date.strftime(\"%m-%d-%Y\")\n\n    # URL da API do Banco Central\n    url = (\n        \"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/\"\n        f\"CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?\"\n        f\"@dataInicial='{data_ini}'&@dataFinalCotacao='{data_fim}'&$format=json\"\n    )\n\n    # Requisição\n    response = requests.get(url)\n    data = response.json()[\"value\"]\n\n    # DataFrame com a resposta\n    df = pd.DataFrame(data)\n\n    # CONVERSÃO IMPORTANTE (evita o erro!)\n    df[\"dataHoraCotacao\"] = pd.to_datetime(df[\"dataHoraCotacao\"]).dt.normalize()\n\n    df = df[[\"dataHoraCotacao\", \"cotacaoCompra\"]]\n\n    # Gerar todas as datas do mês\n    datas_completas = pd.date_range(start=first_date, end=last_date)\n\n    df_final = pd.DataFrame({\"data\": datas_completas})\n\n    # CONVERTER TAMBÉM AQUI (para o mesmo tipo)\n    df_final[\"data\"] = pd.to_datetime(df_final[\"data\"]).dt.normalize()\n\n    # Merge SEM erro\n    df_merge = df_final.merge(\n        df,\n        how=\"left\",\n        left_on=\"data\",\n        right_on=\"dataHoraCotacao\"\n    )\n\n    # Preencher dias sem cotação\n    df_merge[\"cotacaoCompra\"] = df_merge[\"cotacaoCompra\"].ffill()\n\n    # Gráfico\n    fig = px.line(\n        df_merge,\n        x=\"data\",\n        y=\"cotacaoCompra\",\n        title=f\"Cotação do Dólar — {mmyyyy[:2]}/{mmyyyy[2:]}\"\n    )\n\n    return fig\n\n# Mostrar o gráfico no Quarto\nfig = cotacao_dolar_periodo(\"082021\")\nfig"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html",
+    "href": "posts/post-with-code/atividade2.html",
+    "title": "Atividade 2 — Monitoramento da Frota de Ônibus",
+    "section": "",
+    "text": "import os import requests from dotenv import load_dotenv import folium\n\nCarregar token do .env\nload_dotenv(“.env”) TOKEN = os.getenv(“ONIBUS_TOKEN”) # &lt;– CORREÇÃO AQUI API = “http://api.olhovivo.sptrans.com.br/v2.1”\n\n\nLinha desejada\nlinha_usuario = “2506”\n\n\nAutenticação\ns = requests.Session() res = s.post(f”{API}/Login/Autenticar?token={TOKEN}“) print(”Autenticação:“, res.text)\n\n\n——– FUNÇÕES ——–\ndef buscar_codigos(entrada): termo = entrada.split(“-”)[0] r = s.get(f”{API}/Linha/Buscar?termosBusca={termo}“) dados = r.json()\nprint(\"\\nLinhas encontradas:\")\nfor d in dados:\n    print(d)\n\nreturn [d[\"cl\"] for d in dados]\ndef buscar_itinerario(cod): r = s.get(f”{API}/Itinerario?codigoLinha={cod}“) data = r.json()\ntraj = []\nparadas = []\n\nfor k, v in data.items():\n    if k.isdigit():\n        traj.append([v[\"py\"], v[\"px\"]])\n    elif k.startswith(\"p\"):\n        paradas.append({\n            \"nome\": v[\"np\"],\n            \"lat\": v[\"py\"],\n            \"lng\": v[\"px\"]\n        })\n\nreturn traj, paradas\ndef buscar_posicao(cod): r = s.get(f”{API}/Posicao/Linha?codigoLinha={cod}“) dados = r.json() return dados.get(”vs”, [])\n\n\n——– PROCESSAMENTO ——–\ntodos_codigos = buscar_codigos(linha_usuario)\nmelhor_trajeto = None melhor_paradas = None codigo_escolhido = None\nprint(“itinerários…”)\nfor cod in todos_codigos: traj, par = buscar_itinerario(cod)\nprint(f\"Código {cod} → Pontos da rota: {len(traj)} / Paradas: {len(par)}\")\n\nif len(traj) &gt; 0:\n    melhor_trajeto = traj\n    melhor_paradas = par\n    codigo_escolhido = cod\n    break\n\n\nCaso não tenha rota, usar somente paradas\nif melhor_trajeto is None: print(“trajeto, buscando apenas paradas…”) for cod in todos_codigos: r = s.get(f”{API}/Parada/BuscarParadasPorLinha?codigoLinha={cod}“) par = r.json()\n    if len(par) &gt; 0:\n        melhor_paradas = [{\n            \"nome\": p[\"np\"],\n            \"lat\": p[\"py\"],\n            \"lng\": p[\"px\"]\n        } for p in par]\n\n        melhor_trajeto = []\n        codigo_escolhido = cod\n        print(f\"Usando paradas do código {cod}\")\n        break\nif melhor_paradas is None: raise Exception(“API não retornou nenhum dado para essa linha.”)\n\n\n——– Posicionamento dos veículos ——–\nveiculos = buscar_posicao(codigo_escolhido) print(f”encontrados agora: {len(veiculos)}“)\n\n\n——– MAPA ——–\nif melhor_trajeto: lat0, lng0 = melhor_trajeto[0] else: lat0, lng0 = melhor_paradas[0][“lat”], melhor_paradas[0][“lng”]\nm = folium.Map(location=[lat0, lng0], zoom_start=13)\n\n\nRota da linha\nif melhor_trajeto: folium.PolyLine( melhor_trajeto, weight=4, color=“blue”, tooltip=“Rota do ônibus” ).add_to(m)\n\n\nParadas\nfor p in melhor_paradas: folium.Marker( [p[“lat”], p[“lng”]], popup=p[“nome”], icon=folium.Icon(color=“green”, icon=“info-sign”) ).add_to(m)\n\n\nVeículos (posição atual)\nfor v in veiculos: folium.Marker( [v[“py”], v[“px”]], popup=f”Prefixo: {v[‘p’]}“, icon=folium.Icon(color=”red”) ).add_to(m)\n\n\n— SALVAR DENTRO DA MESMA PASTA DO .QMD —\n\n\nCaminho do próprio arquivo .qmd renderizado\noutput_dir = “posts/post-with-code”\nos.makedirs(output_dir, exist_ok=True)\ncaminho_mapa = os.path.join(output_dir, “onibus_mapa.html”) m.save(caminho_mapa)\n\n\nMostrar via iframe\nfrom IPython.display import HTML\nHTML(““”  “““)"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#configuração-e-autenticação",
+    "href": "posts/post-with-code/atividade2.html#configuração-e-autenticação",
+    "title": "Atividade 2 — Monitoramento de Frota de Ônibus",
+    "section": "",
+    "text": "import requests import folium"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#configuração-autenticação-e-busca-inicial",
+    "href": "posts/post-with-code/atividade2.html#configuração-autenticação-e-busca-inicial",
+    "title": "Atividade 2 — Monitoramento de Frota de Ônibus",
+    "section": "",
+    "text": "#| output: false import requests import folium"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#criar-e-exibir-o-mapa-interativo-renderização-forçada",
+    "href": "posts/post-with-code/atividade2.html#criar-e-exibir-o-mapa-interativo-renderização-forçada",
+    "title": "Atividade 2 — Monitoramento de Frota de Ônibus",
+    "section": "5. Criar e Exibir o Mapa Interativo (Renderização Forçada) 🗺️",
+    "text": "5. Criar e Exibir o Mapa Interativo (Renderização Forçada) 🗺️\nfrom IPython.display import display"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#configuração-e-dados-iniciais",
+    "href": "posts/post-with-code/atividade2.html#configuração-e-dados-iniciais",
+    "title": "Atividade 2 — Monitoramento de Frota de Ônibus",
+    "section": "",
+    "text": "#| output: false #| echo: false # Desliga o código para as células de dados.\nimport requests import folium"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade3.html",
+    "href": "posts/post-with-code/atividade3.html",
+    "title": "Atividade 3 — Regressão Linear",
+    "section": "",
+    "text": "Nesta atividade, calculamos a regressão linear entre anos de estudo (X) e salário (Y) utilizando a solução matricial (\\(\\beta = (X^T X)^{-1} X^T y\\)).\n\n\n\n\n\nMostrar código\nimport numpy as np\nimport pandas as pd\n\n# ------------------------------------------------------------------\n# SIMULAÇÃO DA LEITURA DOS ARQUIVOS (X.txt e y.txt)\n# ------------------------------------------------------------------\nvalores_x = np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])\nvalores_y = np.array([2500, 3000, 3800, 4200, 5000, 5500, 6100, 6800, 7500, 8100, 9000])\n\n# ------------------------------------------------------------------\n# CÁLCULO DA REGRESSÃO LINEAR (SOLUÇÃO MATRICIAL)\n# ------------------------------------------------------------------\nX = np.vstack([np.ones(len(valores_x)), valores_x]).T\ny = valores_y\n\nXTX_inv = np.linalg.inv(X.T @ X)\nbeta = XTX_inv @ X.T @ y\n\na = beta[0]\nb = beta[1]\n\n\n\n\n\n\n\n\n\n\nMostrar código\nfrom plotnine import (\n  ggplot, aes, geom_point, geom_abline, theme, element_text, ggsave) \n\n# Importação CRUCIAL para exibir o arquivo PNG salvo\nfrom IPython.display import Image, display\n\n# Cria o DataFrame\ndf = {\"x\": valores_x, \"y\": valores_y}\n\n# Cria o objeto plot\nplot = (\n  ggplot(pd.DataFrame(df), aes(\"x\", \"y\"))\n  + geom_point(color=\"blue\")\n  + geom_abline(intercept=a, slope=b, color=\"red\", size=1)\n  + theme(text=element_text(size=12))\n)\n\n# Salva a imagem no disco (necessário para evitar o KeyError)\nnome_arquivo_png = \"grafico_regressao.png\"\nplot.save(nome_arquivo_png, width=6, height=4, units='in')\n\n# Carrega e exibe o arquivo PNG salvo, garantindo que ele apareça no blog.\ndisplay(Image(filename=nome_arquivo_png))\n\n\n\n\n\nRegressão Linear: Salário (y) vs. Anos de Estudo (x)"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade3.html#carregamento-dos-dados-e-cálculo-da-regressão",
+    "href": "posts/post-with-code/atividade3.html#carregamento-dos-dados-e-cálculo-da-regressão",
+    "title": "Atividade 3 — Regressão Linear",
+    "section": "",
+    "text": "Mostrar código\nimport numpy as np\nimport pandas as pd\n\n# ------------------------------------------------------------------\n# SIMULAÇÃO DA LEITURA DOS ARQUIVOS (X.txt e y.txt)\n# ------------------------------------------------------------------\nvalores_x = np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])\nvalores_y = np.array([2500, 3000, 3800, 4200, 5000, 5500, 6100, 6800, 7500, 8100, 9000])\n\n# ------------------------------------------------------------------\n# CÁLCULO DA REGRESSÃO LINEAR (SOLUÇÃO MATRICIAL)\n# ------------------------------------------------------------------\nX = np.vstack([np.ones(len(valores_x)), valores_x]).T\ny = valores_y\n\nXTX_inv = np.linalg.inv(X.T @ X)\nbeta = XTX_inv @ X.T @ y\n\na = beta[0]\nb = beta[1]"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#processamento-de-dados-oculto",
+    "href": "posts/post-with-code/atividade2.html#processamento-de-dados-oculto",
+    "title": "Atividade 2 — Monitoramento de Frota de Ônibus",
+    "section": "",
+    "text": "#| output: false  # Oculta todos os prints e outputs da busca de dados #| echo: true     # Mantém o código visível, dobrável\nimport requests import folium import os # Necessário para funções de caminho de arquivo"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade3.html#gráfico-da-regressão-estimada",
+    "href": "posts/post-with-code/atividade3.html#gráfico-da-regressão-estimada",
+    "title": "Atividade 3 — Regressão Linear",
+    "section": "",
+    "text": "Mostrar código\nfrom plotnine import (\n  ggplot, aes, geom_point, geom_abline, theme, element_text, ggsave) \n\n# Cria o DataFrame\ndf = {\"x\": valores_x, \"y\": valores_y}\n\nplot = (\n  ggplot(pd.DataFrame(df), aes(\"x\", \"y\"))\n  + geom_point(color=\"blue\")\n  + geom_abline(intercept=a, slope=b, color=\"red\", size=1)\n  + theme(text=element_text(size=12))\n)\n\n# Apenas salva a imagem; não exibe o objeto 'plot'.\n# Isso garante que a imagem PNG é gerada, e o Quarto irá detectá-la \n# e inseri-la no documento, evitando o erro de renderização do Plotnine.\nplot.save(\"grafico_regressao.png\", width=6, height=4, units='in')\n\n# &gt;&gt;&gt; REMOVA OU COMENTE A LINHA ABAIXO PARA EVITAR O KEYERROR:\n# plot"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade3.html#gráfico-da-regressão-estimada-1",
+    "href": "posts/post-with-code/atividade3.html#gráfico-da-regressão-estimada-1",
+    "title": "Atividade 3 — Regressão Linear",
+    "section": "",
+    "text": "Mostrar código\nfrom plotnine import (\n  ggplot, aes, geom_point, geom_abline, theme, element_text, ggsave) \n\n# Importação CRUCIAL para exibir o arquivo PNG salvo\nfrom IPython.display import Image, display\n\n# Cria o DataFrame\ndf = {\"x\": valores_x, \"y\": valores_y}\n\n# Cria o objeto plot\nplot = (\n  ggplot(pd.DataFrame(df), aes(\"x\", \"y\"))\n  + geom_point(color=\"blue\")\n  + geom_abline(intercept=a, slope=b, color=\"red\", size=1)\n  + theme(text=element_text(size=12))\n)\n\n# Salva a imagem no disco (necessário para evitar o KeyError)\nnome_arquivo_png = \"grafico_regressao.png\"\nplot.save(nome_arquivo_png, width=6, height=4, units='in')\n\n# Carrega e exibe o arquivo PNG salvo, garantindo que ele apareça no blog.\ndisplay(Image(filename=nome_arquivo_png))\n\n\n\n\n\nRegressão Linear: Salário (y) vs. Anos de Estudo (x)"
+  },
+  {
+    "objectID": "posts/post-with-code/atividade2.html#configuração-e-busca-de-dados",
+    "href": "posts/post-with-code/atividade2.html#configuração-e-busca-de-dados",
+    "title": "1. Configuração e Busca de Dados",
+    "section": "",
+    "text": "#| label: busca-dados #| output: true # TEMPORARIAMENTE: MUDAMOS PARA TRUE PARA DEBUG #| echo: true\nimport requests import folium from IPython.display import display"
+  }
+]
