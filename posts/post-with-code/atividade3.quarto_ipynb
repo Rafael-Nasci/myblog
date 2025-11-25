@@ -1,0 +1,116 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "---\n",
+        "title: \"Atividade 3 — Regressão Linear\"\n",
+        "format:\n",
+        "  html:\n",
+        "    code-fold: true\n",
+        "    code-summary: \"Mostrar código\"\n",
+        "execute:\n",
+        "  echo: true\n",
+        "  warning: false\n",
+        "  message: false\n",
+        "---\n",
+        "\n",
+        "# Atividade 3 — Regressão Linear: Anos de Estudo vs. Salário 💰\n",
+        "\n",
+        "Nesta atividade, calculamos a regressão linear entre anos de estudo (X) e salário (Y) utilizando a solução matricial ($\\beta = (X^T X)^{-1} X^T y$).\n",
+        "\n",
+        "---\n",
+        "\n",
+        "## 1. Carregamento dos Dados e Cálculo da Regressão"
+      ],
+      "id": "60a7317a"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| output: false\n",
+        "\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "\n",
+        "# ------------------------------------------------------------------\n",
+        "# SIMULAÇÃO DA LEITURA DOS ARQUIVOS (X.txt e y.txt)\n",
+        "# ------------------------------------------------------------------\n",
+        "valores_x = np.array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])\n",
+        "valores_y = np.array([2500, 3000, 3800, 4200, 5000, 5500, 6100, 6800, 7500, 8100, 9000])\n",
+        "\n",
+        "# ------------------------------------------------------------------\n",
+        "# CÁLCULO DA REGRESSÃO LINEAR (SOLUÇÃO MATRICIAL)\n",
+        "# ------------------------------------------------------------------\n",
+        "X = np.vstack([np.ones(len(valores_x)), valores_x]).T\n",
+        "y = valores_y\n",
+        "\n",
+        "XTX_inv = np.linalg.inv(X.T @ X)\n",
+        "beta = XTX_inv @ X.T @ y\n",
+        "\n",
+        "a = beta[0]\n",
+        "b = beta[1]"
+      ],
+      "id": "3305dff4",
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {},
+      "source": [
+        "## 2. Gráfico da Regressão Estimada\n",
+        "\n",
+        "## 2. Gráfico da Regressão Estimada"
+      ],
+      "id": "7855c294"
+    },
+    {
+      "cell_type": "code",
+      "metadata": {},
+      "source": [
+        "#| label: grafico-regressao\n",
+        "#| fig-cap: 'Regressão Linear: Salário (y) vs. Anos de Estudo (x)'\n",
+        "\n",
+        "from plotnine import (\n",
+        "  ggplot, aes, geom_point, geom_abline, theme, element_text, ggsave) \n",
+        "\n",
+        "# Importação CRUCIAL para exibir o arquivo PNG salvo\n",
+        "from IPython.display import Image, display\n",
+        "\n",
+        "# Cria o DataFrame\n",
+        "df = {\"x\": valores_x, \"y\": valores_y}\n",
+        "\n",
+        "# Cria o objeto plot\n",
+        "plot = (\n",
+        "  ggplot(pd.DataFrame(df), aes(\"x\", \"y\"))\n",
+        "  + geom_point(color=\"blue\")\n",
+        "  + geom_abline(intercept=a, slope=b, color=\"red\", size=1)\n",
+        "  + theme(text=element_text(size=12))\n",
+        ")\n",
+        "\n",
+        "# Salva a imagem no disco (necessário para evitar o KeyError)\n",
+        "nome_arquivo_png = \"grafico_regressao.png\"\n",
+        "plot.save(nome_arquivo_png, width=6, height=4, units='in')\n",
+        "\n",
+        "# Carrega e exibe o arquivo PNG salvo, garantindo que ele apareça no blog.\n",
+        "display(Image(filename=nome_arquivo_png))"
+      ],
+      "id": "grafico-regressao",
+      "execution_count": null,
+      "outputs": []
+    }
+  ],
+  "metadata": {
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3 (ipykernel)",
+      "path": "/home/codespace/.local/share/jupyter/kernels/python3"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 5
+}
