@@ -1,5 +1,5 @@
 ---
-title: "Atividade 2 — Monitoramento da Frota de Ônibus"
+title: "Atividade 1 — Cotação do Dólar"
 format:
   html:
     code-fold: true
@@ -15,63 +15,37 @@ import os
 import requests
 from dotenv import load_dotenv
 import folium
+import webbrowser
 
-# Carregar token do .env
 load_dotenv(".env")
-TOKEN = os.getenv
-("ONIBUS_TOKEN")   # <-- CORREÇÃO AQUI
+TOKEN = os.getenv("4e72fe0c1c920056a01ded0b98549432a303ea32adc917693a53e0b331b581bc")
 API = "http://api.olhovivo.sptrans.com.br/v2.1"
 
-# Linha desejada
 linha_usuario = "2506"
 
-# Autenticação
 s = requests.Session()
 res = s.post(f"{API}/Login/Autenticar?token={TOKEN}")
 print("Autenticação:", res.text)
-
-
-# -------- FUNÇÕES --------
 
 def buscar_codigos(entrada):
     termo = entrada.split("-")[0]
     r = s.get(f"{API}/Linha/Buscar?termosBusca={termo}")
     dados = r.json()
-
     print("\nLinhas encontradas:")
     for d in dados:
         print(d)
-
     return [d["cl"] for d in dados]
-
 
 def buscar_itinerario(cod):
     r = s.get(f"{API}/Itinerario?codigoLinha={cod}")
     data = r.json()
-
-    traj = []
-    paradas = []
-
-    for k, v in data.items():
-        if k.isdigit():
-            traj.append([v["py"], v["px"]])
-        elif k.startswith("p"):
-            paradas.append({
-                "nome": v["np"],
-                "lat": v["py"],
-                "lng": v["px"]
-            })
-
-    return traj, paradas
-
+    traj = [[v["py"], v["px"]] for k, v in data.items() if k.isdigit()]
+    par = [{"nome": v["np"], "lat": v["py"], "lng": v["px"]} for k, v in data.items() if k.startswith("p")]
+    return traj, par
 
 def buscar_posicao(cod):
     r = s.get(f"{API}/Posicao/Linha?codigoLinha={cod}")
-    dados = r.json()
-    return dados.get("vs", [])
-
-
-# -------- PROCESSAMENTO --------
+    return r.json().get("vs", [])
 
 todos_codigos = buscar_codigos(linha_usuario)
 
@@ -79,50 +53,34 @@ melhor_trajeto = None
 melhor_paradas = None
 codigo_escolhido = None
 
-print("\nTestando itinerários...\n")
+print("\nTestando códigos...\n")
 
 for cod in todos_codigos:
     traj, par = buscar_itinerario(cod)
-
-    print(f"Código {cod} → Pontos da rota: {len(traj)} / Paradas: {len(par)}")
-
+    print(f"Código {cod} → Pontos: {len(traj)} / Paradas: {len(par)}")
     if len(traj) > 0:
         melhor_trajeto = traj
         melhor_paradas = par
         codigo_escolhido = cod
         break
 
-
-# Caso não tenha rota, usar somente paradas
 if melhor_trajeto is None:
-    print("\nSem trajeto, buscando apenas paradas...\n")
+    print("\nNenhum itinerário com trajeto. Testando paradas.\n")
     for cod in todos_codigos:
         r = s.get(f"{API}/Parada/BuscarParadasPorLinha?codigoLinha={cod}")
         par = r.json()
-
         if len(par) > 0:
-            melhor_paradas = [{
-                "nome": p["np"],
-                "lat": p["py"],
-                "lng": p["px"]
-            } for p in par]
-
+            melhor_paradas = [{"nome": p["np"], "lat": p["py"], "lng": p["px"]} for p in par]
             melhor_trajeto = []
             codigo_escolhido = cod
             print(f"Usando paradas do código {cod}")
             break
 
+if melhor_paradas is None and melhor_trajeto is None:
+    raise Exception("API sem dados para essa linha.")
 
-if melhor_paradas is None:
-    raise Exception("API não retornou nenhum dado para essa linha.")
-
-
-# -------- Posicionamento dos veículos --------
 veiculos = buscar_posicao(codigo_escolhido)
-print(f"\nVeículos encontrados agora: {len(veiculos)}")
-
-
-# -------- MAPA --------
+print(f"\nVeículos encontrados: {len(veiculos)}")
 
 if melhor_trajeto:
     lat0, lng0 = melhor_trajeto[0]
@@ -131,24 +89,16 @@ else:
 
 m = folium.Map(location=[lat0, lng0], zoom_start=13)
 
-# Rota da linha
 if melhor_trajeto:
-    folium.PolyLine(
-        melhor_trajeto,
-        weight=4,
-        color="blue",
-        tooltip="Rota do ônibus"
-    ).add_to(m)
+    folium.PolyLine(melhor_trajeto, weight=4, color="blue").add_to(m)
 
-# Paradas
 for p in melhor_paradas:
     folium.Marker(
         [p["lat"], p["lng"]],
         popup=p["nome"],
-        icon=folium.Icon(color="green", icon="info-sign")
+        icon=folium.Icon(color="green")
     ).add_to(m)
 
-# Veículos (posição atual)
 for v in veiculos:
     folium.Marker(
         [v["py"], v["px"]],
@@ -156,20 +106,7 @@ for v in veiculos:
         icon=folium.Icon(color="red")
     ).add_to(m)
 
+m.save("onibus_mapa.html")
+webbrowser.open("onibus_mapa.html")
 
-# --- SALVAR DENTRO DA MESMA PASTA DO .QMD ---
-
-# Caminho do próprio arquivo .qmd renderizado
-output_dir = "posts/post-with-code"
-
-os.makedirs(output_dir, exist_ok=True)
-
-caminho_mapa = os.path.join(output_dir, "onibus_mapa.html")
-m.save(caminho_mapa)
-
-# Mostrar via iframe
-from IPython.display import HTML
-
-HTML("""
-<iframe src="onibus_mapa.html" width="100%" height="600px"></iframe>
-""")
+print("\nMapa gerado: onibus_mapa.
